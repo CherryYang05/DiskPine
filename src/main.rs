@@ -1,5 +1,5 @@
 use clap::{arg, Parser, Subcommand};
-use diskpine::{error::HMSimError, log, block::HMSimBlock};
+use diskpine::{error::HMSimError, log, HMSimBlock, commands::Pine};
 use ::log::info;
 use regex::Regex;
 use dotenv::dotenv;
@@ -17,22 +17,11 @@ Version: {version}
 {all-args} {tab}"
 )]
 struct Args {
-    // /// 姓名
-    // #[arg(short, long, default_value = "B")]
-    // name: String,
-
-    // /// 年龄
-    // #[arg(short, long, default_value_t = 25)]
-    // age: u32,
-
-    // /// 昵称
-    // #[arg(long, default_value = "cherry")]
-    // nick: String,
 
     /// 子命令
     #[command(subcommand)]
     command: Commands,
-
+    
 }
 
 #[derive(Subcommand, Debug)]
@@ -67,10 +56,31 @@ enum Commands {
     },
 
     /// 将微软原始 trace 格式转化为 HMSim 格式的 trace，修改后的文件与其同名
+    // 原始 trace 格式有 7 列，含义分别如下：
+    // Col 1: 时间戳(timestamp，单位为 100 ns)
+    // Col 2: 主机名(hostname)
+    // Col 3: 设备名称(devname)
+    // Col 4: 读写(rw)
+    // Col 5: 偏移量(offset，单位为字节)
+    // Col 6: 长度(length，单位为字节)
+    // Col 7: 响应时间(responsetime，单位为 100 ns)
+
+    // disksim 格式的 trace 各列含义如下：
+    // Col 1: 读写(RW)
+    // Col 2: Hit(暂时固定为 Hit)
+    // Col 3: 偏移量(offset，单位：扇区)
+    // Col 4: 长度(length，单位：块，扇区，即 512B)
+    // Col 5: 服务时间(servtime，即完成该次请求的总时间)
+    // Col 6: 时间戳(源码中的字段名为 nextinter)
+
     OriginToSim {
         /// 原始 trace 文件名
         #[arg(short, long)]
         file: String,
+
+        /// 是否保留时间戳
+        #[arg(short, long)]
+        timestamp: bool
     },
 }
 
@@ -81,18 +91,19 @@ fn main() {
     info!("Diskpine is running...");
 
     let args = Args::parse();
+
     match args.command {
-        
+
         Commands::GenerateTrace { addr_start, size_data, num_request, length_request } => {
-            println!("{:?}", addr_start.unwrap())
+            Pine.generate_trace();
         },
 
         Commands::TraceFootSize { file } => {
-
+            Pine.trace_foot_size(file);
         },
 
-        Commands::OriginToSim { file } => {
-
+        Commands::OriginToSim { file, timestamp } => {
+            Pine.origin_to_sim(file, timestamp);
         }
     }
 }
