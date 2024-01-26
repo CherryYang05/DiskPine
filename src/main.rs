@@ -1,27 +1,22 @@
-use clap::{arg, Parser, Subcommand};
-use diskpine::{error::HMSimError, log, HMSimBlock, commands::Pine};
 use ::log::info;
-use regex::Regex;
+use clap::{arg, Parser, Subcommand};
+use diskpine::{commands::Pine, error::HMSimError, log, HMSimBlock};
 use dotenv::dotenv;
-
+use regex::Regex;
 
 #[derive(Parser, Debug)]
 #[command(author = "Cherry")]
 #[command(version)]
-#[command(about = "HMSim", long_about = "HMSim")]
-#[command(
-    help_template = "{about}
+#[command(about = "HMSim Command Tool", long_about = "HMSim Command Tool")]
+#[command(help_template = "{about}
 Author: {author}
 Version: {version}
 {usage-heading} {usage}
-{all-args} {tab}"
-)]
+{all-args} {tab}")]
 struct Args {
-
     /// 子命令
     #[command(subcommand)]
     command: Commands,
-
 }
 
 #[derive(Subcommand, Debug)]
@@ -31,12 +26,12 @@ enum Commands {
         /// 指定 trace 的起始地址，若不指定该字段，则随机从一个地址开始
         #[arg(short, long)]
         addr_start: Option<u64>,
-        
+
         /// 通过指定数据量确定 trace(单位: B, KB, MB, GB, TB 等)
         #[arg(short, long)]
         #[clap(value_parser = string_to_hmsim_block)]
         size_data: Option<HMSimBlock>,
-        
+
         /// 通过指定请求数量确定 trace(单位: 条数)
         #[arg(short, long)]
         num_request: Option<u64>,
@@ -63,11 +58,30 @@ enum Commands {
 
         /// 是否保留时间戳
         #[arg(short, long)]
-        timestamp: bool
+        timestamp: bool,
+    },
+
+    /// 生成适用于 Tape 的 trace
+    GenerateTapeTrace {
+
+        /// 读写比例(写:读)
+        #[arg(long)]
+        rwrate: String,
+        
+        /// 写请求大小范围(write_size)
+        #[arg(long)]
+        ws: String,
+
+        /// 读请求大小范围(read_size)
+        #[arg(long)]
+        rs: String,
+
+        
+        batch: String,
     },
 }
 
-fn main() -> Result<(), HMSimError>{
+fn main() -> Result<(), HMSimError> {
     // 从 .env 文件中读取 LOG_LEVEL 环境变量
     dotenv().ok();
     log::log_init();
@@ -76,27 +90,31 @@ fn main() -> Result<(), HMSimError>{
     let args = Args::parse();
 
     match args.command {
-
-        Commands::GenerateTrace { addr_start, size_data, num_request, length_request } => {
-            Pine.generate_trace()
-        },
+        Commands::GenerateTrace {
+            addr_start,
+            size_data,
+            num_request,
+            length_request,
+        } => Pine.generate_trace(),
 
         Commands::TraceFootSize { file } => {
-            Pine.trace_foot_size(file)
-        },
+            Pine.trace_foot_size(file.as_str())
+        }
 
         Commands::OriginToSim { file, timestamp } => {
             Pine.origin_to_sim(file.as_str(), timestamp)
         },
 
-        _ => Err(HMSimError::CommandError)
+        Commands::GenerateTapeTrace {} => {
+            
+        },
+
+        _ => Err(HMSimError::CommandError),
     }
 }
 
-
 /// 将以 KB, MB 为单位的字符串转化成以扇区为单位
 fn string_to_hmsim_block(size: &str) -> Result<HMSimBlock, HMSimError> {
-
     let regex = Regex::new(r"(\d+)([A-Za-z]+)").unwrap();
 
     let mut hmsim_block = HMSimBlock::new();
@@ -118,16 +136,16 @@ fn string_to_hmsim_block(size: &str) -> Result<HMSimBlock, HMSimError> {
         } else if unit.eq_ignore_ascii_case("t") || unit.eq_ignore_ascii_case("tb") {
             hmsim_block.byte = number * 1024 * 1024 * 1024 * 1024;
         } else {
-            return Err(HMSimError::ParseError)
+            return Err(HMSimError::ParseError);
         }
 
         hmsim_block.block = hmsim_block.byte / 512;
-        
+
         // 打印结果
         // println!("byte: {}", hmsim_block.byte);
         // println!("block: {}", hmsim_block.block);
     } else {
-        return Err(HMSimError::ParseError)
+        return Err(HMSimError::ParseError);
     }
 
     Ok(hmsim_block)

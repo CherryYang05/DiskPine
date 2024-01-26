@@ -17,7 +17,7 @@
 
 use std::{
     fs::{remove_file, File, OpenOptions},
-    io::{BufRead, BufReader, Read, Write},
+    io::{BufRead, BufReader, Write},
     path::Path,
 };
 
@@ -34,7 +34,7 @@ pub fn origin_to_sim(filename: &str, timestamp: bool) -> Result<(), HMSimError> 
     // parent 获取文件父目录，file_stem 获取不包含扩展名的文件名
     let new_filename = format!("{}.trace", path.file_stem().unwrap().to_string_lossy().to_string());
 
-    remove_file(&new_filename);
+    remove_file(&new_filename)?;
     let mut output_file = OpenOptions::new()
         .append(true)
         .create(true)
@@ -48,7 +48,7 @@ pub fn origin_to_sim(filename: &str, timestamp: bool) -> Result<(), HMSimError> 
 
     let rw = vec!["R", "W"];
     let mut nr = 1;
-    let mut pre_timestamp = 0.0;
+    let mut pre_timestamp;
     let mut next_timestamp = 0.0;
 
     // 遍历每一行并将其存储为 String
@@ -85,7 +85,7 @@ pub fn origin_to_sim(filename: &str, timestamp: bool) -> Result<(), HMSimError> 
         new_vec.push("0.000000");
 
         // 模拟器 trace 第六个参数: 时间戳
-        let mut inter = String::new();
+        let inter;
 
         if timestamp {
             if nr == 1 {
