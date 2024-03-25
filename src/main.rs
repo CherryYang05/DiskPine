@@ -89,24 +89,24 @@ enum Commands {
         #[clap(value_parser = size_range_to_start_end)]
         read_size: Option<SizePair>,
 
-        /// 请求大小范围(该参数当 write_size 和 read_size 均为 None 时有效)
+        /// 请求大小范围(该参数当 wsize 和 rsize 均为 None 时有效)
         #[arg(long)]
         // #[clap(requires_if_all(&["write_size", "read_size"], &["None", "None"]))]
         #[clap(value_parser = size_range_to_start_end)]
         rwsize: Option<SizePair>,
 
-        /// 是否将每个读写操作当做是一个 batch
+        /// 设置读写操作的 batch，支持参数为 r, w, rw
         #[arg(long)]
         batch: Option<String>,
 
-        /// 每个 write batch 的大小范围
-        #[arg(long)]
+        /// 每个 write batch 的大小范围(该参数当 batch 有值时有效)
+        #[arg(name = "batch-wsize", long)]
         #[clap(value_parser = size_range_to_start_end)]
         // #[clap(requires_if("batch", "Some"))] // 设置该参数依赖于 batch
         batch_write_size: Option<SizePair>,
 
-        /// 每个 read batch 的大小范围
-        #[arg(long)]
+        /// 每个 read batch 的大小范围(该参数当 batch 有值时有效)
+        #[arg(name = "batch-rsize", long)]
         #[clap(value_parser = size_range_to_start_end)]
         // #[clap(requires_if("batch", "Some"))] // 设置该参数依赖于 batch
         batch_read_size: Option<SizePair>,
