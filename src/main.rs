@@ -1,9 +1,15 @@
-use ::log::info;
+use ::log::{info, debug};
 use clap::{arg, Parser, Subcommand};
-use diskpine::{commands::Pine, error::HMSimError, log, HMSimBlock};
+use diskpine::{
+    commands::Pine,
+    error::HMSimError,
+    log,
+    utils::{self, rate_to_num, size_range_to_start_end, string_to_hmsim_block},
+    HMSimBlock, SizePair,
+};
 use dotenv::dotenv;
-use regex::Regex;
 
+#[warn(dead_code)]
 #[derive(Parser, Debug)]
 #[command(author = "Cherry")]
 #[command(version)]
@@ -63,21 +69,47 @@ enum Commands {
 
     /// 生成适用于 Tape 的 trace
     GenerateTapeTrace {
+        /// 读写操作的总大小
+        #[arg(name = "size", long)]
+        #[clap(value_parser = string_to_hmsim_block)]
+        total_size: HMSimBlock,
 
-        /// 读写比例(写:读)
+        /// 读写比例(读:写)
         #[arg(long)]
-        rwrate: String,
-        
-        /// 写请求大小范围(write_size)
-        #[arg(long)]
-        ws: String,
+        #[clap(value_parser = rate_to_num)]
+        rwrate: (f32, f32),
 
-        /// 读请求大小范围(read_size)
-        #[arg(long)]
-        rs: String,
+        /// 写请求大小范围
+        #[arg(name = "wsize", long)]
+        #[clap(value_parser = size_range_to_start_end)]
+        write_size: Option<SizePair>,
 
-        
-        batch: String,
+        /// 读请求大小范围
+        #[arg(name = "rsize", long)]
+        #[clap(value_parser = size_range_to_start_end)]
+        read_size: Option<SizePair>,
+
+        /// 请求大小范围(该参数当 write_size 和 read_size 均为 None 时有效)
+        #[arg(long)]
+        // #[clap(requires_if_all(&["write_size", "read_size"], &["None", "None"]))]
+        #[clap(value_parser = size_range_to_start_end)]
+        rwsize: Option<SizePair>,
+
+        /// 是否将每个读写操作当做是一个 batch
+        #[arg(long)]
+        batch: Option<String>,
+
+        /// 每个 write batch 的大小范围
+        #[arg(long)]
+        #[clap(value_parser = size_range_to_start_end)]
+        // #[clap(requires_if("batch", "Some"))] // 设置该参数依赖于 batch
+        batch_write_size: Option<SizePair>,
+
+        /// 每个 read batch 的大小范围
+        #[arg(long)]
+        #[clap(value_parser = size_range_to_start_end)]
+        // #[clap(requires_if("batch", "Some"))] // 设置该参数依赖于 batch
+        batch_read_size: Option<SizePair>,
     },
 }
 
@@ -97,56 +129,44 @@ fn main() -> Result<(), HMSimError> {
             length_request,
         } => Pine.generate_trace(),
 
-        Commands::TraceFootSize { file } => {
-            Pine.trace_foot_size(file.as_str())
+        Commands::TraceFootSize { file } => Pine.trace_foot_size(file.as_str()),
+
+        Commands::OriginToSim { file, timestamp } => Pine.origin_to_sim(file.as_str(), timestamp),
+
+        Commands::GenerateTapeTrace {
+            total_size,
+            rwrate,
+            write_size,
+            read_size,
+            rwsize,
+            batch,
+            batch_write_size,
+            batch_read_size,
+        } => {
+            let tape_trace_struct = utils::command_gen_tape_trace_to_tape_trace_struct(
+                total_size,
+                rwrate,
+                write_size,
+                read_size,
+                rwsize,
+                batch,
+                batch_write_size,
+                batch_read_size,
+            );
+
+            // debug!("{:#?}", tape_trace_struct);
+            Pine.generate_tape_trace(tape_trace_struct?)
         }
-
-        Commands::OriginToSim { file, timestamp } => {
-            Pine.origin_to_sim(file.as_str(), timestamp)
-        },
-
-        Commands::GenerateTapeTrace {} => {
-            
-        },
 
         _ => Err(HMSimError::CommandError),
     }
 }
 
-/// 将以 KB, MB 为单位的字符串转化成以扇区为单位
-fn string_to_hmsim_block(size: &str) -> Result<HMSimBlock, HMSimError> {
-    let regex = Regex::new(r"(\d+)([A-Za-z]+)").unwrap();
+#[cfg(test)]
+mod tests {
 
-    let mut hmsim_block = HMSimBlock::new();
+    use super::*;
 
-    if let Some(captures) = regex.captures(size) {
-        // 提取数字部分
-        let number = captures[1].parse::<u64>().unwrap();
-
-        // 提取单位部分
-        let unit = &captures[2];
-        if unit.eq_ignore_ascii_case("b") {
-            hmsim_block.byte = number;
-        } else if unit.eq_ignore_ascii_case("k") || unit.eq_ignore_ascii_case("kb") {
-            hmsim_block.byte = number * 1024;
-        } else if unit.eq_ignore_ascii_case("m") || unit.eq_ignore_ascii_case("mb") {
-            hmsim_block.byte = number * 1024 * 1024;
-        } else if unit.eq_ignore_ascii_case("g") || unit.eq_ignore_ascii_case("gb") {
-            hmsim_block.byte = number * 1024 * 1024 * 1024;
-        } else if unit.eq_ignore_ascii_case("t") || unit.eq_ignore_ascii_case("tb") {
-            hmsim_block.byte = number * 1024 * 1024 * 1024 * 1024;
-        } else {
-            return Err(HMSimError::ParseError);
-        }
-
-        hmsim_block.block = hmsim_block.byte / 512;
-
-        // 打印结果
-        // println!("byte: {}", hmsim_block.byte);
-        // println!("block: {}", hmsim_block.block);
-    } else {
-        return Err(HMSimError::ParseError);
-    }
-
-    Ok(hmsim_block)
+    #[test]
+    fn test_generate_tape_trace() {}
 }

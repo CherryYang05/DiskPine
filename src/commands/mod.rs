@@ -1,9 +1,11 @@
 use crate::error::HMSimError;
 
+use self::generate_tape_trace::TapeTrace;
+
 pub mod origin_to_sim;
 pub mod trace_foot_size;
 // pub mod generate_trace;
-pub mod today;
+pub mod generate_tape_trace;
 
 pub struct Pine;
 
@@ -25,8 +27,7 @@ impl Pine {
         origin_to_sim::origin_to_sim(file, timestamp)
     }
 
-    pub fn today(&self) -> Result<(), HMSimError> {
-        today::today();
-        Ok(())
+    pub fn generate_tape_trace(&self, tape_trace_struct: TapeTrace) -> Result<(), HMSimError> {
+        generate_tape_trace::generate_tape_trace(tape_trace_struct)
     }
 }
