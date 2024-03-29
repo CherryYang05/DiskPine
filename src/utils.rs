@@ -12,8 +12,14 @@ pub fn size_range_to_start_end(size: &str) -> Result<SizePair, HMSimError> {
     Ok(parse_dash(size)?)
 }
 
+/// 将形如 a:b 的形式转化为 (f32, f32)
 pub fn rate_to_num(size: &str) -> Result<(f32, f32), HMSimError> {
     Ok(parse_colon(size)?)
+}
+
+/// 将形如 a-b 的形式转化为 (u64, u64)
+pub fn range_to_num(size: &str) -> Result<(u64, u64), HMSimError> {
+    Ok(parse_dash_num(size)?)
 }
 
 /// 把用横杠(-)分隔的两个字符转化成两个 HMSimBlock 结构体
@@ -26,6 +32,19 @@ fn parse_dash(size: &str) -> Result<SizePair, HMSimError> {
         size_parse_pair.size_begin = unit_parse(&captures[1])?;
         size_parse_pair.size_end = unit_parse(&captures[2])?;
         Ok(size_parse_pair)
+    } else {
+        return Err(HMSimError::ParseError);
+    }
+}
+
+/// 把用横杠(-)分隔的两个字符转化成两个 HMSimBlock 结构体
+fn parse_dash_num(size: &str) -> Result<(u64, u64), HMSimError> {
+    let regex = Regex::new(r"(\d+)-(\d+)").unwrap();
+
+    if let Some(captures) = regex.captures(size) {
+        let first = captures[1].parse::<u64>().unwrap();
+        let second = captures[2].parse::<u64>().unwrap();
+        Ok((first, second))
     } else {
         return Err(HMSimError::ParseError);
     }
@@ -58,7 +77,7 @@ fn unit_parse(size: &str) -> Result<HMSimBlock, HMSimError> {
 
         // 提取单位部分
         let unit = &captures[2];
-
+        
         if unit.eq_ignore_ascii_case("b") {
             hmsim_block.byte = number;
         } else if unit.eq_ignore_ascii_case("k") || unit.eq_ignore_ascii_case("kb") {
@@ -83,26 +102,29 @@ fn unit_parse(size: &str) -> Result<HMSimBlock, HMSimError> {
 
 /// 将子命令参数转化为 TapeTrace 结构体
 pub fn command_gen_tape_trace_to_tape_trace_struct(
-    size: HMSimBlock,
-    rwrate: (f32, f32),
-    write_size: Option<SizePair>,
-    read_size: Option<SizePair>,
-    rwsize: Option<SizePair>,
+    total_size: HMSimBlock,
+    // rwrate: (f32, f32),
+    block_size: HMSimBlock,
+    write_size: Option<(u64, u64)>,
+    read_size: Option<(u64, u64)>,
+    rwsize: Option<(u64, u64)>,
     batch: Option<String>,
-    batch_write_size: Option<SizePair>,
-    batch_read_size: Option<SizePair>,
+    batch_IOw_num: Option<(u64, u64)>,
+    batch_IOr_num: Option<(u64, u64)>,
 ) -> Result<TapeTrace, HMSimError> {
     let mut tape_trace = TapeTrace::new();
 
-    tape_trace.total_size = size.block;
+    tape_trace.total_size = total_size.block;
 
-    tape_trace.read_rate = rwrate.0;
-    tape_trace.write_rate = rwrate.1;
+    tape_trace.block_size = block_size.block;
+
+    // tape_trace.read_rate = rwrate.0;
+    // tape_trace.write_rate = rwrate.1;
 
     if let Some(size_pair) = write_size {
-        tape_trace.write_size_start = size_pair.size_begin.block;
-        tape_trace.write_size_end = size_pair.size_end.block;
-        tape_trace.write_size_range = size_pair.size_end.block - size_pair.size_begin.block;
+        tape_trace.write_size_start = size_pair.0;
+        tape_trace.write_size_end = size_pair.1;
+        tape_trace.write_size_range = size_pair.1 - size_pair.0;
     } else {
         tape_trace.write_size_start = 0;
         tape_trace.write_size_end = 0;
@@ -110,9 +132,9 @@ pub fn command_gen_tape_trace_to_tape_trace_struct(
     }
 
     if let Some(size_pair) = read_size {
-        tape_trace.read_size_start = size_pair.size_begin.block;
-        tape_trace.read_size_end = size_pair.size_end.block;
-        tape_trace.read_size_range = size_pair.size_end.block - size_pair.size_begin.block;
+        tape_trace.read_size_start = size_pair.0;
+        tape_trace.read_size_end = size_pair.1;
+        tape_trace.read_size_range = size_pair.1 - size_pair.0;
     } else {
         tape_trace.read_size_start = 0;
         tape_trace.read_size_end = 0;
@@ -120,33 +142,33 @@ pub fn command_gen_tape_trace_to_tape_trace_struct(
     }
 
     if let Some(size_pair) = rwsize {
-        tape_trace.rwsize_start = size_pair.size_begin.block;
-        tape_trace.rwsize_end = size_pair.size_end.block;
-        tape_trace.rwsize_range = size_pair.size_end.block - size_pair.size_begin.block;
+        tape_trace.rwsize_start = size_pair.0;
+        tape_trace.rwsize_end = size_pair.1;
+        tape_trace.rwsize_range = size_pair.1 - size_pair.0;
     } else {
         tape_trace.rwsize_start = 0;
         tape_trace.rwsize_end = 0;
         tape_trace.rwsize_range = 0;
     }
 
-    if let Some(size_pair) = batch_write_size {
-        tape_trace.batch_write_size_begin = size_pair.size_begin.block;
-        tape_trace.batch_write_size_end = size_pair.size_end.block;
-        tape_trace.batch_write_size_range = size_pair.size_end.block - size_pair.size_begin.block;
+    if let Some(size_pair) = batch_IOw_num {
+        tape_trace.batch_IOw_num_begin = size_pair.0;
+        tape_trace.batch_IOw_num_end = size_pair.1;
+        tape_trace.batch_IOw_num_range = size_pair.1 - size_pair.0;
     } else {
-        tape_trace.batch_write_size_begin = 0;
-        tape_trace.batch_write_size_end = 0;
-        tape_trace.batch_write_size_range = 0;
+        tape_trace.batch_IOw_num_begin = 0;
+        tape_trace.batch_IOw_num_end = 0;
+        tape_trace.batch_IOw_num_range = 0;
     }
 
-    if let Some(size_pair) = batch_read_size {
-        tape_trace.batch_read_size_begin = size_pair.size_begin.block;
-        tape_trace.batch_read_size_end = size_pair.size_end.block;
-        tape_trace.batch_read_size_range = size_pair.size_end.block - size_pair.size_begin.block;
+    if let Some(size_pair) = batch_IOr_num {
+        tape_trace.batch_IOr_num_begin = size_pair.0;
+        tape_trace.batch_IOr_num_end = size_pair.1;
+        tape_trace.batch_IOr_num_range = size_pair.1 - size_pair.0;
     } else {
-        tape_trace.batch_read_size_begin = 0;
-        tape_trace.batch_read_size_end = 0;
-        tape_trace.batch_read_size_range = 0;
+        tape_trace.batch_IOw_num_begin = 0;
+        tape_trace.batch_IOw_num_end = 0;
+        tape_trace.batch_IOw_num_range = 0;
     }
 
     if let Some(batch) = batch {
@@ -165,10 +187,15 @@ mod tests {
 
     #[test]
     fn test_unit_parse() {
-        let size = "1M-2M";
-        println!("{:?}", size_range_to_start_end(size));
+        let size = "5-15";
+        println!("{:?}", range_to_num(size));
     }
-
+    
+    #[test]
+    fn test_block_size() {
+        let size = "12M";
+        println!("{:?}", string_to_hmsim_block(size));
+    }
     // fn test_command_gen_tape_trace_to_tape_trace_struct() {
     //     let tape_trace = TapeTrace::new();
     // }

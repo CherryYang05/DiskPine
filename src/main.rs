@@ -4,7 +4,7 @@ use diskpine::{
     commands::Pine,
     error::HMSimError,
     log,
-    utils::{self, rate_to_num, size_range_to_start_end, string_to_hmsim_block},
+    utils::{self, range_to_num, size_range_to_start_end, string_to_hmsim_block},
     HMSimBlock, SizePair,
 };
 use dotenv::dotenv;
@@ -75,41 +75,48 @@ enum Commands {
         total_size: HMSimBlock,
 
         /// 读写比例(读:写)
-        #[arg(long)]
-        #[clap(value_parser = rate_to_num)]
-        rwrate: (f32, f32),
+        // #[arg(long)]
+        // #[clap(value_parser = rate_to_num)]
+        // rwrate: (f32, f32),
+
+        /// 生成的请求粒度，即块大小
+        #[arg(name = "blk_size", long)]
+        #[clap(value_parser = string_to_hmsim_block)]
+        block_size: HMSimBlock,
 
         /// 写请求大小范围
         #[arg(name = "wsize", long)]
-        #[clap(value_parser = size_range_to_start_end)]
-        write_size: Option<SizePair>,
+        #[clap(value_parser = range_to_num)]
+        write_size: Option<(u64, u64)>,
 
         /// 读请求大小范围
         #[arg(name = "rsize", long)]
-        #[clap(value_parser = size_range_to_start_end)]
-        read_size: Option<SizePair>,
+        #[clap(value_parser = range_to_num)]
+        read_size: Option<(u64, u64)>,
 
         /// 请求大小范围(该参数当 wsize 和 rsize 均为 None 时有效)
         #[arg(long)]
         // #[clap(requires_if_all(&["write_size", "read_size"], &["None", "None"]))]
-        #[clap(value_parser = size_range_to_start_end)]
-        rwsize: Option<SizePair>,
+        #[clap(value_parser = range_to_num)]
+        rwsize: Option<(u64, u64)>,
 
         /// 设置读写操作的 batch，支持参数为 r, w, rw
         #[arg(long)]
         batch: Option<String>,
 
-        /// 每个 write batch 的大小范围(该参数当 batch 有值时有效)
-        #[arg(name = "batch-wsize", long)]
-        #[clap(value_parser = size_range_to_start_end)]
+        /// 每个 write batch 的大小范围(单位为 blk_size，该参数当 batch 有值时有效)
+        #[arg(name = "batch_IOw_num", long)]
+        #[clap(value_parser = range_to_num)]
         // #[clap(requires_if("batch", "Some"))] // 设置该参数依赖于 batch
-        batch_write_size: Option<SizePair>,
+        // batch_write_size: Option<SizePair>,
+        batch_iow_num: Option<(u64, u64)>,
 
-        /// 每个 read batch 的大小范围(该参数当 batch 有值时有效)
-        #[arg(name = "batch-rsize", long)]
-        #[clap(value_parser = size_range_to_start_end)]
+        /// 每个 read batch 的大小范围(单位为 blk_size，该参数当 batch 有值时有效)
+        #[arg(name = "batch_IOr_num", long)]
+        #[clap(value_parser = range_to_num)]
         // #[clap(requires_if("batch", "Some"))] // 设置该参数依赖于 batch
-        batch_read_size: Option<SizePair>,
+        // batch_read_size: Option<SizePair>,
+        batch_ior_num: Option<(u64, u64)>
     },
 }
 
@@ -135,23 +142,23 @@ fn main() -> Result<(), HMSimError> {
 
         Commands::GenerateTapeTrace {
             total_size,
-            rwrate,
+            block_size,
             write_size,
             read_size,
             rwsize,
             batch,
-            batch_write_size,
-            batch_read_size,
+            batch_iow_num,
+            batch_ior_num,
         } => {
             let tape_trace_struct = utils::command_gen_tape_trace_to_tape_trace_struct(
                 total_size,
-                rwrate,
+                block_size,
                 write_size,
                 read_size,
                 rwsize,
                 batch,
-                batch_write_size,
-                batch_read_size,
+                batch_iow_num,
+                batch_ior_num,
             );
 
             // debug!("{:#?}", tape_trace_struct);
