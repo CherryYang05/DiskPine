@@ -27,27 +27,27 @@ struct Args {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-    /// 生成 trace，可以指定随机或顺序，读写比例，请求大小
-    GenerateTrace {
-        /// 指定 trace 的起始地址，若不指定该字段，则随机从一个地址开始
-        #[arg(short, long)]
-        addr_start: Option<u64>,
+    // /// 生成 trace，可以指定随机或顺序，读写比例，请求大小
+    // GenerateTrace {
+        // /// 指定 trace 的起始地址，若不指定该字段，则随机从一个地址开始
+        // #[arg(short, long)]
+        // addr_start: Option<u64>,
 
-        /// 通过指定数据量确定 trace(单位: B, KB, MB, GB, TB 等)
-        #[arg(short, long)]
-        #[clap(value_parser = string_to_hmsim_block)]
-        size_data: Option<HMSimBlock>,
+        // /// 通过指定数据量确定 trace(单位: B, KB, MB, GB, TB 等)
+        // #[arg(short, long)]
+        // #[clap(value_parser = string_to_hmsim_block)]
+        // size_data: Option<HMSimBlock>,
 
-        /// 通过指定请求数量确定 trace(单位: 条数)
-        #[arg(short, long)]
-        num_request: Option<u64>,
+        // /// 通过指定请求数量确定 trace(单位: 条数)
+        // #[arg(short, long)]
+        // num_request: Option<u64>,
 
-        /// 指定每个请求的大小，若不指定，则通过指定随机变化的范围随机变化
-        /// (单位: B, KB, MB, GB, TB 等)
-        #[arg(short, long)]
-        #[clap(value_parser = string_to_hmsim_block)]
-        length_request: Option<HMSimBlock>,
-    },
+        // /// 指定每个请求的大小，若不指定，则通过指定随机变化的范围随机变化
+        // /// (单位: B, KB, MB, GB, TB 等)
+        // #[arg(short, long)]
+        // #[clap(value_parser = string_to_hmsim_block)]
+        //length_request: Option<HMSimBlock>,
+    // },
 
     /// 计算 trace 数据量及落盘量
     TraceFootSize {
@@ -74,27 +74,22 @@ enum Commands {
         #[clap(value_parser = string_to_hmsim_block)]
         total_size: HMSimBlock,
 
-        /// 读写比例(读:写)
-        // #[arg(long)]
-        // #[clap(value_parser = rate_to_num)]
-        // rwrate: (f32, f32),
-
         /// 生成的请求粒度，即块大小
         #[arg(name = "blk_size", long)]
         #[clap(value_parser = string_to_hmsim_block)]
         block_size: HMSimBlock,
 
-        /// 写请求大小范围
+        /// 单个写请求大小范围
         #[arg(name = "wsize", long)]
         #[clap(value_parser = range_to_num)]
         write_size: Option<(u64, u64)>,
 
-        /// 读请求大小范围
+        /// 单个读请求大小范围
         #[arg(name = "rsize", long)]
         #[clap(value_parser = range_to_num)]
         read_size: Option<(u64, u64)>,
 
-        /// 请求大小范围(该参数当 wsize 和 rsize 均为 None 时有效)
+        /// 单个请求大小范围(该参数当 wsize 和 rsize 均为 None 时有效)
         #[arg(long)]
         // #[clap(requires_if_all(&["write_size", "read_size"], &["None", "None"]))]
         #[clap(value_parser = range_to_num)]
@@ -104,14 +99,14 @@ enum Commands {
         #[arg(long)]
         batch: Option<String>,
 
-        /// 每个 write batch 的大小范围(单位为 blk_size，该参数当 batch 有值时有效)
+        /// 每个 write batch 的大小范围(单位为 blk_size，该参数当 batch 包含 'w' 时有效)
         #[arg(name = "batch_IOw_num", long)]
         #[clap(value_parser = range_to_num)]
         // #[clap(requires_if("batch", "Some"))] // 设置该参数依赖于 batch
         // batch_write_size: Option<SizePair>,
         batch_iow_num: Option<(u64, u64)>,
 
-        /// 每个 read batch 的大小范围(单位为 blk_size，该参数当 batch 有值时有效)
+        /// 每个 read batch 的大小范围(单位为 blk_size，该参数当 batch 包含 'r' 时有效)
         #[arg(name = "batch_IOr_num", long)]
         #[clap(value_parser = range_to_num)]
         // #[clap(requires_if("batch", "Some"))] // 设置该参数依赖于 batch
@@ -129,12 +124,12 @@ fn main() -> Result<(), HMSimError> {
     let args = Args::parse();
 
     match args.command {
-        Commands::GenerateTrace {
-            addr_start,
-            size_data,
-            num_request,
-            length_request,
-        } => Pine.generate_trace(),
+        // Commands::GenerateTrace {
+        //     addr_start,
+        //     size_data,
+        //     num_request,
+        //     length_request,
+        // } => Pine.generate_trace(),
 
         Commands::TraceFootSize { file } => Pine.trace_foot_size(file.as_str()),
 

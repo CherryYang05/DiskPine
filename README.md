@@ -1,8 +1,8 @@
-## HMSim 模拟器集成命令行工具
+## 1. HMSim 模拟器集成命令行工具
 
 使用前需要安装 Rust 环境。[在 Linux 上安装 Rust 环境](https://www.rust-lang.org/tools/install)
 
-### 支持的功能
+### 2. 支持的功能
 
 目前集成命令行工具支持三个命令：
 
@@ -10,17 +10,84 @@
 
 2. origin-to-sim：将微软原始 trace 格式转化为 HMSim 格式的 trace
 
-3. genereate-tape-trace：生成适用于 Tape 的 trace，支持若干参数
+3. genereate-tape-trace：生成适用于 tape 的 trace，支持若干参数
 
-### 使用方式
+### 3. 使用方式
+
+在 `diskpine` 下执行：
 
 ```shell
 cargo run --bin diskpine -- [Command]
 ```
 
+第一次执行需要下载需要的库文件，可能较慢。
+
 可以运行 `cargo run --bin diskpine -- --help` 查看目前支持的命令。
 
-以其中的 `generate-tape-trace` 命令为例，查看 `help`：
+#### 3.1 trace-foot-size 命令
+
+功能：计算 trace 的数据量和落盘量
+
+查看 `help`：
+
+Shell Command:
+
+`cargo run --bin diskpine -- trace-foot-size --help`
+
+Output:
+
+```shell
+计算 trace 数据量及落盘量
+
+Usage: diskpine trace-foot-size --file <FILE>
+
+Options:
+  -f, --file <FILE>  trace 文件名
+  -h, --help         Print help
+```
+
+一个使用样例为：
+
+`cargo run --bin diskpine -- trace-foot-size -f tape.trace`
+
+#### 3.2 origin-to-sim 命令
+
+功能：将微软原始 trace 格式转化为 HMSim 格式的 trace
+
+查看 `help`：
+
+Shell Command:
+
+`cargo run --bin diskpine -- origin-to-sim --help`
+
+Output:
+
+```shell
+将微软原始 trace 格式转化为 HMSim 格式的 trace，修改后的文件与其同名
+
+Usage: diskpine origin-to-sim [OPTIONS] --file <FILE>
+
+Options:
+  -f, --file <FILE>  原始 trace 文件名
+  -t, --timestamp    是否保留时间戳
+  -h, --help         Print help
+```
+
+一个使用样例为：
+
+`cargo run --bin diskpine -- origin-to-sim -f tape.csv -t`
+
+#### 3.3 genereate-tape-trace 命令
+
+功能：生成适用于 tape 的 trace，支持若干参数
+
+查看 `help`：
+
+Shell Command:
+
+`cargo run --bin diskpine -- generate-tape-trace --help`
+
+Output:
 
 ```shell
 Usage: diskpine generate-tape-trace [OPTIONS] --size <size> --rwrate <RWRATE>
@@ -39,5 +106,5 @@ Options:
 
 一个使用样例为：
 
-`cargo run --bin diskpine -- generate-tape-trace --size=1T --rwrate=1:2.5 --rsize=12M-1G --wsize=1G-62G --batch=r --batch-rsize=1G-8G`
+`cargo run --bin diskpine -- generate-tape-trace --size=1T --blk_size=256K --rsize=10-100 --wsize=100-100000 --batch=rw --batch_IOw_num=5-15 --batch_IOr_num=1-3`
 

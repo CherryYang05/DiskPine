@@ -109,8 +109,8 @@ pub fn command_gen_tape_trace_to_tape_trace_struct(
     read_size: Option<(u64, u64)>,
     rwsize: Option<(u64, u64)>,
     batch: Option<String>,
-    batch_IOw_num: Option<(u64, u64)>,
-    batch_IOr_num: Option<(u64, u64)>,
+    batch_iow_num: Option<(u64, u64)>,
+    batch_ior_num: Option<(u64, u64)>,
 ) -> Result<TapeTrace, HMSimError> {
     let mut tape_trace = TapeTrace::new();
 
@@ -151,24 +151,24 @@ pub fn command_gen_tape_trace_to_tape_trace_struct(
         tape_trace.rwsize_range = 0;
     }
 
-    if let Some(size_pair) = batch_IOw_num {
-        tape_trace.batch_IOw_num_begin = size_pair.0;
-        tape_trace.batch_IOw_num_end = size_pair.1;
-        tape_trace.batch_IOw_num_range = size_pair.1 - size_pair.0;
+    if let Some(size_pair) = batch_iow_num {
+        tape_trace.batch_iow_num_begin = size_pair.0;
+        tape_trace.batch_iow_num_end = size_pair.1;
+        tape_trace.batch_iow_num_range = size_pair.1 - size_pair.0;
     } else {
-        tape_trace.batch_IOw_num_begin = 0;
-        tape_trace.batch_IOw_num_end = 0;
-        tape_trace.batch_IOw_num_range = 0;
+        tape_trace.batch_iow_num_begin = 0;
+        tape_trace.batch_iow_num_end = 0;
+        tape_trace.batch_iow_num_range = 0;
     }
 
-    if let Some(size_pair) = batch_IOr_num {
-        tape_trace.batch_IOr_num_begin = size_pair.0;
-        tape_trace.batch_IOr_num_end = size_pair.1;
-        tape_trace.batch_IOr_num_range = size_pair.1 - size_pair.0;
+    if let Some(size_pair) = batch_ior_num {
+        tape_trace.batch_ior_num_begin = size_pair.0;
+        tape_trace.batch_ior_num_end = size_pair.1;
+        tape_trace.batch_ior_num_range = size_pair.1 - size_pair.0;
     } else {
-        tape_trace.batch_IOw_num_begin = 0;
-        tape_trace.batch_IOw_num_end = 0;
-        tape_trace.batch_IOw_num_range = 0;
+        tape_trace.batch_iow_num_begin = 0;
+        tape_trace.batch_iow_num_end = 0;
+        tape_trace.batch_iow_num_range = 0;
     }
 
     if let Some(batch) = batch {

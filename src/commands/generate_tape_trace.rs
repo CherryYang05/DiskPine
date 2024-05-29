@@ -50,13 +50,13 @@ pub struct TapeTrace {
     pub rwsize_range: u64,
 
     pub batch: String,
-    pub batch_IOw_num_begin: u64,
-    pub batch_IOw_num_end: u64,
-    pub batch_IOw_num_range: u64,
+    pub batch_iow_num_begin: u64,
+    pub batch_iow_num_end: u64,
+    pub batch_iow_num_range: u64,
 
-    pub batch_IOr_num_begin: u64,
-    pub batch_IOr_num_end: u64,
-    pub batch_IOr_num_range: u64,
+    pub batch_ior_num_begin: u64,
+    pub batch_ior_num_end: u64,
+    pub batch_ior_num_range: u64,
 }
 
 impl TapeTrace {
@@ -76,12 +76,12 @@ impl TapeTrace {
             rwsize_end: 0,
             rwsize_range: 0,
             batch: String::new(),
-            batch_IOw_num_begin: 0,
-            batch_IOw_num_end: 0,
-            batch_IOw_num_range: 0,
-            batch_IOr_num_begin: 0,
-            batch_IOr_num_end: 0,
-            batch_IOr_num_range: 0,
+            batch_iow_num_begin: 0,
+            batch_iow_num_end: 0,
+            batch_iow_num_range: 0,
+            batch_ior_num_begin: 0,
+            batch_ior_num_end: 0,
+            batch_ior_num_range: 0,
         }
     }
 
@@ -94,9 +94,10 @@ impl TapeTrace {
                 return (0, 0);
             }
             if self.batch.contains("r") {
+                // debug!("batch_ior_num_begin: {}, batch_ior_num_begin: {}", self.batch_ior_num_begin, self.batch_ior_num_end);
                 // 随机生成一个 batch 大小
                 let mut op_num_per_batch =
-                    rand.gen_range(self.batch_IOr_num_begin..=self.batch_IOr_num_end);
+                    rand.gen_range(self.batch_ior_num_begin..=self.batch_ior_num_end);
                 // debug!("op_num_per_batch: {}", op_num_per_batch);
                 
                 let mut return_size = 0;
@@ -114,7 +115,7 @@ impl TapeTrace {
             if self.batch.contains("w") {
                 // 随机生成一个 batch 大小，按照 ALIEN 对齐
                 let mut op_num_per_batch =
-                rand.gen_range(self.batch_IOw_num_begin..=self.batch_IOw_num_end);
+                rand.gen_range(self.batch_iow_num_begin..=self.batch_iow_num_end);
                 // debug!("op_num_per_batch: {}", op_num_per_batch);
                 
                 let mut return_size = 0;
@@ -140,9 +141,12 @@ impl TapeTrace {
             let mut read_blocksize =
                 rand.gen_range(self.read_size_start..=self.read_size_end) * self.block_size;
             // debug!("read_size: {}-{}", self.read_size_start, self.read_size_end);
-            
+
+            // 要生成的地址的起始地址
+            let addr_begin = 263680000;
+
             // 随机生成读请求偏移量
-            let read_offset = rand.gen_range(0..*cur_offset) / ALIEN * ALIEN;
+            let read_offset = rand.gen_range(addr_begin..*cur_offset) / ALIEN * ALIEN;
             
             // debug!("read_offset: {}", read_offset);
             
@@ -251,7 +255,7 @@ pub fn generate_tape_trace(mut trace: TapeTrace) -> Result<(), HMSimError> {
     let mut rw;
 
     // 记录顺序写请求已经写到的偏移量
-    let mut cur_offset = 0;
+    let mut cur_offset = 372736000;
 
     // // 如果有 batch 操作，重新计算读写比
     // trace.recalculate_rwrate();
@@ -277,7 +281,16 @@ pub fn generate_tape_trace(mut trace: TapeTrace) -> Result<(), HMSimError> {
     }
 
     while trace.total_size > 0 {
-        let rand_num = rand.gen_range(0..2);
+        let rand_num;
+        // debug!("read: {}, write: {}", trace.read_size_end, trace.write_size_end);
+        if trace.read_size_end == 0 {
+            rand_num = rand.gen_range(1..2);
+        } else if trace.write_size_end == 0 {
+            rand_num = rand.gen_range(0..1);
+        } else {
+            rand_num = rand.gen_range(0..2);
+        }
+        // debug!("rand_num: {}", rand_num);
         // info!("rand_num: {}", rand_num);
         // info!("read_rate: {}, write_rate: {}", trace.read_rate, trace.write_rate);
         // 随机数小于 1 则为读操作
@@ -286,7 +299,7 @@ pub fn generate_tape_trace(mut trace: TapeTrace) -> Result<(), HMSimError> {
         } else {
             rw = "W";
         }
-
+        // debug!("rw: {}", rw);
         // 生成 trace，返回值是随机生成的请求大小
         let (op_num, generate_size) = trace.operation(&mut rand, rw, &mut cur_offset);
         if rw == "R" {

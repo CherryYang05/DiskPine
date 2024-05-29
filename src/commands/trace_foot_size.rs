@@ -1,15 +1,16 @@
-// 该程序作用是计算 disksim 格式的 trace 实际占用的硬盘空间
-//
-// 这和 trace 表示的数据量大小不同。
-//
-// 前者会包含重复的请求，故不会重复计算，且 trace 实际占用的空间
-//
-// footprint 只计算写请求。
-//
-// use radixtree;
-// use art;
+/// 该程序作用是计算 disksim 格式的 trace 实际占用的硬盘空间
+///
+/// 这和 trace 表示的数据量大小不同。
+///
+/// 前者会包含重复的请求，故不会重复计算
+///
+/// trace 实际占用的空间 footprint 只计算写请求。
+///
+
 
 use std::{fs::File, io::BufRead, io::BufReader};
+
+use log::info;
 
 use crate::error::HMSimError;
 
@@ -99,7 +100,10 @@ pub fn trace_foot_size(filename: &str) -> Result<(String, String), HMSimError> {
     let mut footprint: u64 = 0;
 
     // 从 trace 中解析读写、长度以及偏移量字段
-    for line in buf.lines() {
+    for (index, line) in buf.lines().enumerate() {
+        // if index % 10000 == 0 {
+        //     info!("{}", index);
+        // }
         let line = line?;
 
         // 存储每一行 trace

@@ -1,5 +1,5 @@
 [package]
-authors = ["Cherry <a@example.com>"]
+authors = ["Cherry <baominyang22@mails.ucas.ac.cn>"]
 name = "diskpine"
 version = "0.1.0"
 edition = "2021"
@@ -18,9 +18,6 @@ thiserror = "1.0"
 
 # 正则表达式匹配
 regex = "1.10.2"
-
-# radixtree = "0.1.1"
-# art = "0.1.3"
 
 # 日志
 log = "0.4.20"
