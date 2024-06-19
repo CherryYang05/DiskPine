@@ -79,12 +79,12 @@ enum Commands {
         #[clap(value_parser = string_to_hmsim_block)]
         block_size: HMSimBlock,
 
-        /// 单个写请求大小范围
+        /// 单个写请求大小范围，若没有写请求则设置为 0-0
         #[arg(name = "wsize", long)]
         #[clap(value_parser = range_to_num)]
         write_size: Option<(u64, u64)>,
 
-        /// 单个读请求大小范围
+        /// 单个读请求大小范围，若没有读请求则设置为 0-0
         #[arg(name = "rsize", long)]
         #[clap(value_parser = range_to_num)]
         read_size: Option<(u64, u64)>,
