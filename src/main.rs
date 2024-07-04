@@ -167,8 +167,6 @@ fn main() -> Result<(), HMSimError> {
 #[cfg(test)]
 mod tests {
 
-    use super::*;
-
     #[test]
     fn test_generate_tape_trace() {}
 }

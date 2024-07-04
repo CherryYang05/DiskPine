@@ -248,14 +248,17 @@ impl TapeTrace {
     // }
 }
 
-// 所有地址按照 1024 块对齐
-static ALIEN: u64 = 1024;
+// 地址对齐的单位，256KB
+static ALIEN: u64 = 512;
 
+/// 对外暴露的函数
 pub fn generate_tape_trace(mut trace: TapeTrace) -> Result<(), HMSimError> {
     let mut rw;
 
     // 记录顺序写请求已经写到的偏移量
-    let mut cur_offset = 372736000;
+    // 515000 - 728000 (wrap2)
+    // 515000 - 940000 (wrap2-3)
+    let mut cur_offset = 481280000;
 
     // // 如果有 batch 操作，重新计算读写比
     // trace.recalculate_rwrate();
