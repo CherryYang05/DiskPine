@@ -143,7 +143,8 @@ impl TapeTrace {
             // debug!("read_size: {}-{}", self.read_size_start, self.read_size_end);
 
             // 要生成的地址的起始地址
-            let addr_begin = 263680000;
+            // let addr_begin = 263680000;
+            let addr_begin = 0;
 
             // 随机生成读请求偏移量
             let read_offset = rand.gen_range(addr_begin..*cur_offset) / ALIEN * ALIEN;
@@ -258,7 +259,8 @@ pub fn generate_tape_trace(mut trace: TapeTrace) -> Result<(), HMSimError> {
     // 记录顺序写请求已经写到的偏移量
     // 515000 - 728000 (wrap2)
     // 515000 - 940000 (wrap2-3)
-    let mut cur_offset = 481280000;
+    // let mut cur_offset = 481280000;
+    let mut cur_offset = 0;
 
     // // 如果有 batch 操作，重新计算读写比
     // trace.recalculate_rwrate();
