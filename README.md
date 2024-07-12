@@ -106,6 +106,7 @@ Options:
       --batch <BATCH>                  设置读写操作的 batch，支持参数为 r, w, rw
       --batch_IOw_num <batch_IOw_num>  每个 write batch 的大小范围(单位为 blk_size，该参数当 batch 包含 'w' 时有效)
       --batch_IOr_num <batch_IOr_num>  每个 read batch 的大小范围(单位为 blk_size，该参数当 batch 包含 'r' 时有效)
+      --dist <dist>                    生成的时间间隔满足的数学分布[支持的参数：exp:lambda(指数分布:lambda)，uni(均匀分布)，poi(泊松分布:lambda)]
   -h, --help                           Print help
 ```
 

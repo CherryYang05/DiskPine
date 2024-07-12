@@ -6,6 +6,7 @@ use std::{
 
 use log::{debug, info};
 use rand::{rngs::ThreadRng, Rng};
+use rand_distr::Distribution;
 
 /// 生成的 trace 包含以下参数：
 ///
@@ -23,7 +24,7 @@ use rand::{rngs::ThreadRng, Rng};
 ///
 /// batch_size(设定每个 batch 的大小范围)=512M-8G, 表示每个 batch 大小为 1G
 ///
-use crate::error::HMSimError;
+use crate::{error::HMSimError, Dist};
 // #[warn(dead_code)]
 
 /// 通过子命令参数转化成的 TapeTrace 结构体
@@ -57,6 +58,7 @@ pub struct TapeTrace {
     pub batch_ior_num_begin: u64,
     pub batch_ior_num_end: u64,
     pub batch_ior_num_range: u64,
+    pub dist: Dist,
 }
 
 impl TapeTrace {
@@ -82,11 +84,12 @@ impl TapeTrace {
             batch_ior_num_begin: 0,
             batch_ior_num_end: 0,
             batch_ior_num_range: 0,
+            dist: Dist::None,
         }
     }
 
     /// 生成读写请求，返回 (op_num, return_size)
-    fn operation(&self, rand: &mut ThreadRng, rw: &str, cur_offset: &mut u64) -> (u64, u64) {
+    fn operation(&self, rand: &mut ThreadRng, trace: &TapeTrace, rw: &str, cur_offset: &mut u64) -> (u64, u64) {
         // debug!("batch: {}", self.batch.contains("r"));
         let mut op_num = 0;
         if rw == "R" {
@@ -102,14 +105,14 @@ impl TapeTrace {
                 
                 let mut return_size = 0;
                 while op_num_per_batch > 0 {
-                    let blocksize = self.generate_one(rand, "R", cur_offset);
+                    let blocksize = self.generate_one(rand, trace, "R", cur_offset);
                     op_num += 1;
                     return_size += blocksize;
                     op_num_per_batch -= 1;
                 }
                 return (op_num, return_size);
             } else {
-                return (1, self.generate_one(rand, "R", cur_offset));
+                return (1, self.generate_one(rand, trace, "R", cur_offset));
             }
         } else if rw == "W" {
             if self.batch.contains("w") {
@@ -120,7 +123,7 @@ impl TapeTrace {
                 
                 let mut return_size = 0;
                 while op_num_per_batch > 0 {
-                    let blocksize = self.generate_one(rand, "W", cur_offset);
+                    let blocksize = self.generate_one(rand, trace, "W", cur_offset);
                     op_num += 1;
                     return_size += blocksize;
                     op_num_per_batch -= 1;
@@ -128,14 +131,14 @@ impl TapeTrace {
                 // debug!("return size: {}", return_size);
                 return (op_num, return_size);
             } else {
-                return (1, self.generate_one(rand, "W", cur_offset));
+                return (1, self.generate_one(rand, trace, "W", cur_offset));
             }
         }
         (0, 0)
     }
 
     /// 随机生成一条请求的请求大小和请求偏移，返回生成的请求大小
-    fn generate_one(&self, rand: &mut ThreadRng, rw: &str, cur_offset: &mut u64) -> u64 {
+    fn generate_one(&self, rand: &mut ThreadRng, trace: &TapeTrace, rw: &str, cur_offset: &mut u64) -> u64 {
         if rw == "R" {
             // 随机生成一个读请求大小
             let mut read_blocksize =
@@ -155,7 +158,7 @@ impl TapeTrace {
                 read_blocksize = *cur_offset - read_offset;
             }
             
-            Self::write_to_file("R", read_offset, read_blocksize);
+            Self::write_to_file("R", read_offset, read_blocksize, &trace.dist);
             
             return read_blocksize;
         } else if rw == "W" {
@@ -170,7 +173,7 @@ impl TapeTrace {
 
             // debug!("write_blocksize: {}", write_blocksize);
 
-            Self::write_to_file("W", *cur_offset, write_blocksize);
+            Self::write_to_file("W", *cur_offset, write_blocksize, &trace.dist);
 
             *cur_offset += write_blocksize;
             // debug!("cur_offset: {}", cur_offset);
@@ -180,7 +183,7 @@ impl TapeTrace {
         0
     }
 
-    fn write_to_file(rw: &str, offset: u64, blocksize: u64) {
+    fn write_to_file(rw: &str, offset: u64, blocksize: u64, dist: &Dist) {
         let mut output_file = OpenOptions::new()
             .append(true)
             .create(true)
@@ -207,8 +210,9 @@ impl TapeTrace {
         // 模拟器 trace 第五个参数: 服务时间
         req.push("0.000000");
 
-        // 模拟器 trace 第六个参数: 时间戳
-        req.push("0.000000");
+        // 模拟器 trace 第六个参数: 时间间隔
+        let time_interval = &get_timeinteval_from_distribution(dist).to_string()[0..=7];
+        req.push(time_interval);
 
         output_file.write_all(req.join(" ").as_bytes()).unwrap();
         output_file.write_all("\n".as_bytes()).unwrap();
@@ -260,7 +264,7 @@ pub fn generate_tape_trace(mut trace: TapeTrace) -> Result<(), HMSimError> {
     // 515000 - 728000 (wrap2)
     // 515000 - 940000 (wrap2-3)
     // let mut cur_offset = 481280000;
-    let mut cur_offset = 0;
+    let mut cur_offset = 481280000;
 
     // // 如果有 batch 操作，重新计算读写比
     // trace.recalculate_rwrate();
@@ -306,7 +310,7 @@ pub fn generate_tape_trace(mut trace: TapeTrace) -> Result<(), HMSimError> {
         }
         // debug!("rw: {}", rw);
         // 生成 trace，返回值是随机生成的请求大小
-        let (op_num, generate_size) = trace.operation(&mut rand, rw, &mut cur_offset);
+        let (op_num, generate_size) = trace.operation(&mut rand, &trace, rw, &mut cur_offset);
         if rw == "R" {
             op_read += op_num;
             read_data += generate_size;
@@ -369,3 +373,28 @@ fn generate_weighted_random_number(rng: &mut ThreadRng, start: u64, end: u64) ->
     }
     return res;
 }
+
+
+/// 根据数学分布生成时间间隔
+fn get_timeinteval_from_distribution(dist: &Dist) -> f64 {
+    match *dist {
+        Dist::Exponential(lambda) => {
+            let exp = rand_distr::Exp::new(lambda).unwrap();
+            exp.sample(&mut rand::thread_rng())
+        },
+        _ => 0.0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_timeinteval_from_distribution() {
+        let exp = rand_distr::Exp::new(2.0).unwrap();
+        let v = exp.sample(&mut rand::thread_rng());
+        println!("{} is from a Exp(2) distribution", v);
+    }
+}
+

@@ -1,11 +1,7 @@
-use ::log::{info, debug};
+use ::log::{debug, info};
 use clap::{arg, Parser, Subcommand};
 use diskpine::{
-    commands::Pine,
-    error::HMSimError,
-    log,
-    utils::{self, range_to_num, size_range_to_start_end, string_to_hmsim_block},
-    HMSimBlock, SizePair,
+    commands::Pine, error::HMSimError, log, utils::{self, dist_analyze, range_to_num, size_range_to_start_end, string_to_hmsim_block}, Dist, HMSimBlock, SizePair
 };
 use dotenv::dotenv;
 
@@ -29,26 +25,25 @@ struct Args {
 enum Commands {
     // /// 生成 trace，可以指定随机或顺序，读写比例，请求大小
     // GenerateTrace {
-        // /// 指定 trace 的起始地址，若不指定该字段，则随机从一个地址开始
-        // #[arg(short, long)]
-        // addr_start: Option<u64>,
+    // /// 指定 trace 的起始地址，若不指定该字段，则随机从一个地址开始
+    // #[arg(short, long)]
+    // addr_start: Option<u64>,
 
-        // /// 通过指定数据量确定 trace(单位: B, KB, MB, GB, TB 等)
-        // #[arg(short, long)]
-        // #[clap(value_parser = string_to_hmsim_block)]
-        // size_data: Option<HMSimBlock>,
+    // /// 通过指定数据量确定 trace(单位: B, KB, MB, GB, TB 等)
+    // #[arg(short, long)]
+    // #[clap(value_parser = string_to_hmsim_block)]
+    // size_data: Option<HMSimBlock>,
 
-        // /// 通过指定请求数量确定 trace(单位: 条数)
-        // #[arg(short, long)]
-        // num_request: Option<u64>,
+    // /// 通过指定请求数量确定 trace(单位: 条数)
+    // #[arg(short, long)]
+    // num_request: Option<u64>,
 
-        // /// 指定每个请求的大小，若不指定，则通过指定随机变化的范围随机变化
-        // /// (单位: B, KB, MB, GB, TB 等)
-        // #[arg(short, long)]
-        // #[clap(value_parser = string_to_hmsim_block)]
-        //length_request: Option<HMSimBlock>,
+    // /// 指定每个请求的大小，若不指定，则通过指定随机变化的范围随机变化
+    // /// (单位: B, KB, MB, GB, TB 等)
+    // #[arg(short, long)]
+    // #[clap(value_parser = string_to_hmsim_block)]
+    //length_request: Option<HMSimBlock>,
     // },
-
     /// 计算 trace 数据量及落盘量
     TraceFootSize {
         /// trace 文件名
@@ -95,7 +90,7 @@ enum Commands {
         #[clap(value_parser = range_to_num)]
         rwsize: Option<(u64, u64)>,
 
-        /// 设置读写操作的 batch，支持参数为 r, w, rw
+        /// 设置读写操作的 batch [支持参数为 r, w, rw]
         #[arg(long)]
         batch: Option<String>,
 
@@ -111,7 +106,12 @@ enum Commands {
         #[clap(value_parser = range_to_num)]
         // #[clap(requires_if("batch", "Some"))] // 设置该参数依赖于 batch
         // batch_read_size: Option<SizePair>,
-        batch_ior_num: Option<(u64, u64)>
+        batch_ior_num: Option<(u64, u64)>,
+
+        /// 生成的时间间隔满足的数学分布[支持的参数：exp:lambda(指数分布:lambda)，uni(均匀分布)，poi(泊松分布:lambda)]
+        #[arg(name = "dist", long)]
+        #[clap(value_parser = dist_analyze)]
+        distribution: Option<Dist>,
     },
 }
 
@@ -130,7 +130,6 @@ fn main() -> Result<(), HMSimError> {
         //     num_request,
         //     length_request,
         // } => Pine.generate_trace(),
-
         Commands::TraceFootSize { file } => Pine.trace_foot_size(file.as_str()),
 
         Commands::OriginToSim { file, timestamp } => Pine.origin_to_sim(file.as_str(), timestamp),
@@ -144,6 +143,7 @@ fn main() -> Result<(), HMSimError> {
             batch,
             batch_iow_num,
             batch_ior_num,
+            distribution
         } => {
             let tape_trace_struct = utils::command_gen_tape_trace_to_tape_trace_struct(
                 total_size,
@@ -154,6 +154,7 @@ fn main() -> Result<(), HMSimError> {
                 batch,
                 batch_iow_num,
                 batch_ior_num,
+                distribution
             );
 
             // debug!("{:#?}", tape_trace_struct);

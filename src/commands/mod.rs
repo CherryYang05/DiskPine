@@ -1,3 +1,5 @@
+use log::info;
+
 use crate::error::HMSimError;
 
 use self::generate_tape_trace::TapeTrace;
@@ -18,7 +20,7 @@ impl Pine {
 
     pub fn trace_foot_size(&self, file: &str) -> Result<(), HMSimError> {
         let (footprint, volume) = trace_foot_size::trace_foot_size(file).unwrap();
-        println!("tracefile: {}\nfootprint: {:>7}\nvolume: {:>10}", file, footprint, volume);
+        info!("tracefile: {}\nfootprint: {:>7}\nvolume: {:>10}", file, footprint, volume);
         Ok(())
     }
 

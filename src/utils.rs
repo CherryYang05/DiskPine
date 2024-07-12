@@ -1,6 +1,7 @@
+use log::info;
 use regex::Regex;
 
-use crate::{commands::generate_tape_trace::TapeTrace, error::HMSimError, HMSimBlock, SizePair};
+use crate::{commands::generate_tape_trace::TapeTrace, error::HMSimError, Dist, HMSimBlock, SizePair};
 
 /// 将以 KB, MB 为单位的字符串转化成 HMSimBlock 结构体(即以扇区为单位)
 pub fn string_to_hmsim_block(size: &str) -> Result<HMSimBlock, HMSimError> {
@@ -100,6 +101,21 @@ fn unit_parse(size: &str) -> Result<HMSimBlock, HMSimError> {
     Ok(hmsim_block)
 }
 
+/// 数学分布转化为 Dist 枚举
+pub fn dist_analyze(dist: &str) -> Result<Dist, HMSimError> {
+
+    let tmp: Vec<&str> = dist.split(':').collect();
+    let dist_name = tmp[0];
+    let param: Vec<f64> = tmp.iter().skip(1).map(|s| s.parse::<f64>().unwrap()).collect();
+
+    match dist_name {
+        "exp" => Ok(Dist::Exponential(param[0])),       // 指数分布
+        "uni" => Ok(Dist::Uniform),                     // 均匀分布
+        "poi" => Ok(Dist::Poisson(param[0])),           // 泊松分布
+        _ => Err(HMSimError::ParseError)
+    }
+}
+
 /// 将子命令参数转化为 TapeTrace 结构体
 pub fn command_gen_tape_trace_to_tape_trace_struct(
     total_size: HMSimBlock,
@@ -111,6 +127,7 @@ pub fn command_gen_tape_trace_to_tape_trace_struct(
     batch: Option<String>,
     batch_iow_num: Option<(u64, u64)>,
     batch_ior_num: Option<(u64, u64)>,
+    distribution: Option<Dist>
 ) -> Result<TapeTrace, HMSimError> {
     let mut tape_trace = TapeTrace::new();
 
@@ -176,6 +193,13 @@ pub fn command_gen_tape_trace_to_tape_trace_struct(
     } else {
         tape_trace.batch = String::new();
     }
+
+    if let Some(dist) = distribution {
+        tape_trace.dist = dist;
+    } else {
+        tape_trace.dist = Dist::None
+    }
+    
 
     Ok(tape_trace)
 }
