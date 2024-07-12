@@ -112,7 +112,10 @@ Options:
 
 一个使用样例为：
 
-`cargo run --bin diskpine -- generate-tape-trace --size=10T --blk_size=256K --rsize=10-40960 --wsize=0-0`
+`cargo run --bin diskpine -- generate-tape-trace --size=10T --blk_size=256K --rsize=40-40960 --wsize=0-0`
+
+**设置生成的请求大小符合 Exp(0.0000001) 分布，请求的时间间隔符合 Exp(0.1)：**
+`cargo run --bin diskpine -- generate-tape-trace --size=10T --blk_size=256K --rsize=40-40960 --wsize=0-0 --req_dist=exp:0.0000001 --time_dist=exp:0.1`
 
 ### 2.2 用二进制文件执行
 
@@ -134,7 +137,7 @@ Options:
 ### 2.2.3 genereate-tape-trace
 以 `2.1.3` 的子命令为例，给出一个命令样例：
 
-`./diskpine generate-tape-trace --size=10T --blk_size=256K --rsize=10-40960 --wsize=0-0`
+`./diskpine generate-tape-trace --size=10T --blk_size=256K --rsize=40-40960 --wsize=0-0`
 
 
 

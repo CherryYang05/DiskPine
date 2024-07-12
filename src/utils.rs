@@ -121,19 +121,28 @@ pub fn command_gen_tape_trace_to_tape_trace_struct(
     total_size: HMSimBlock,
     // rwrate: (f32, f32),
     block_size: HMSimBlock,
+    rw: Option<String>,
     write_size: Option<(u64, u64)>,
     read_size: Option<(u64, u64)>,
     rwsize: Option<(u64, u64)>,
     batch: Option<String>,
     batch_iow_num: Option<(u64, u64)>,
     batch_ior_num: Option<(u64, u64)>,
-    distribution: Option<Dist>
+    time_interval_distribution: Option<Dist>,
+    req_length_distribution: Option<Dist>
 ) -> Result<TapeTrace, HMSimError> {
     let mut tape_trace = TapeTrace::new();
 
     tape_trace.total_size = total_size.block;
 
     tape_trace.block_size = block_size.block;
+
+
+    if let Some(rw) = rw {
+        tape_trace.rw = rw;
+    } else {
+        tape_trace.rw = String::new();
+    }
 
     // tape_trace.read_rate = rwrate.0;
     // tape_trace.write_rate = rwrate.1;
@@ -193,13 +202,18 @@ pub fn command_gen_tape_trace_to_tape_trace_struct(
     } else {
         tape_trace.batch = String::new();
     }
-
-    if let Some(dist) = distribution {
-        tape_trace.dist = dist;
+    
+    if let Some(time_interval_dist) = time_interval_distribution {
+        tape_trace.time_interval_dist = time_interval_dist;
     } else {
-        tape_trace.dist = Dist::None
+        tape_trace.time_interval_dist = Dist::None
     }
     
+    if let Some(req_length_dist) = req_length_distribution {
+        tape_trace.req_length_dist = req_length_dist;
+    } else {
+        tape_trace.req_length_dist = Dist::None
+    }
 
     Ok(tape_trace)
 }

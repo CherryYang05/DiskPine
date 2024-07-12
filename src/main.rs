@@ -74,6 +74,10 @@ enum Commands {
         #[clap(value_parser = string_to_hmsim_block)]
         block_size: HMSimBlock,
 
+        /// 指定生成的请求类型 [支持参数为 r, w, rw]
+        #[arg(long)]
+        rw: Option<String>,
+
         /// 单个写请求大小范围，若没有写请求则设置为 0-0
         #[arg(name = "wsize", long)]
         #[clap(value_parser = range_to_num)]
@@ -109,9 +113,14 @@ enum Commands {
         batch_ior_num: Option<(u64, u64)>,
 
         /// 生成的时间间隔满足的数学分布[支持的参数：exp:lambda(指数分布:lambda)，uni(均匀分布)，poi(泊松分布:lambda)]
-        #[arg(name = "dist", long)]
+        #[arg(name = "time_dist", long)]
         #[clap(value_parser = dist_analyze)]
-        distribution: Option<Dist>,
+        time_interval_distribution: Option<Dist>,
+
+        /// 生成的请求大小满足的数学分布[支持的参数：exp:lambda(指数分布:lambda)，uni(均匀分布)，poi(泊松分布:lambda)]
+        #[arg(name = "req_dist", long)]
+        #[clap(value_parser = dist_analyze)]
+        req_length_distribution: Option<Dist>,
     },
 }
 
@@ -137,24 +146,28 @@ fn main() -> Result<(), HMSimError> {
         Commands::GenerateTapeTrace {
             total_size,
             block_size,
+            rw,
             write_size,
             read_size,
             rwsize,
             batch,
             batch_iow_num,
             batch_ior_num,
-            distribution
+            time_interval_distribution,
+            req_length_distribution
         } => {
             let tape_trace_struct = utils::command_gen_tape_trace_to_tape_trace_struct(
                 total_size,
                 block_size,
+                rw,
                 write_size,
                 read_size,
                 rwsize,
                 batch,
                 batch_iow_num,
                 batch_ior_num,
-                distribution
+                time_interval_distribution,
+                req_length_distribution
             );
 
             // debug!("{:#?}", tape_trace_struct);

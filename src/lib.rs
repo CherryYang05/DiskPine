@@ -34,8 +34,8 @@ impl SizePair {
 /// 数学分布的枚举
 #[derive(Debug, Clone)]
 pub enum Dist {
-    Exponential(f64),    // 指数分布
-    Uniform,        // 均匀分布
-    Poisson(f64),        // 泊松分布
+    Exponential(f64),   // 指数分布
+    Uniform,            // 均匀分布
+    Poisson(f64),       // 泊松分布
     None
 }
