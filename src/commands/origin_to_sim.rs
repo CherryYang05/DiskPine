@@ -108,7 +108,7 @@ pub fn origin_to_sim(filename: &str, timestamp: bool) -> Result<(), HMSimError> 
         output_file.write_all(new_vec.join(" ").as_bytes()).unwrap();
         output_file.write_all("\n".as_bytes()).unwrap();
     }
-    info!("done");
+    info!("origin_to_sim running done.");
     Ok(())
 }
 

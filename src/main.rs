@@ -65,6 +65,7 @@ enum Commands {
     /// 生成适用于 Tape 的 trace
     GenerateTapeTrace {
         /// 读写操作的总大小
+        // #[arg(value_name = "data_size")]
         #[arg(name = "size", long)]
         #[clap(value_parser = string_to_hmsim_block)]
         total_size: HMSimBlock,
@@ -77,6 +78,19 @@ enum Commands {
         /// 指定生成的请求类型 [支持参数为 r, w, rw]
         #[arg(long)]
         rw: Option<String>,
+
+        /// 指定读操作的顺序性(该参数当 rw 包含 r 有效) [可选参数为 rand(默认), seq]
+        #[arg(name = "ro", long, value_name = "read_order")]
+        read_order: Option<String>,
+
+        /// 指定写操作的顺序性(该参数当 rw 包含 w 有效) [可选参数为 rand(默认), seq]
+        #[arg(name = "wo", long, value_name = "write_order")]
+        write_order: Option<String>,
+
+        /// 若只有读操作，指定已经写的数据地址(如果 ro=rand, 该值必须指定且不为 0) [默认值: 0]
+        #[arg(name = "woff", long, value_name = "write_offset")]
+        #[clap(value_parser = string_to_hmsim_block)]
+        write_offset: Option<HMSimBlock>,
 
         /// 单个写请求大小范围，若没有写请求则设置为 0-0
         #[arg(name = "wsize", long)]
@@ -147,6 +161,9 @@ fn main() -> Result<(), HMSimError> {
             total_size,
             block_size,
             rw,
+            read_order,
+            write_order,
+            write_offset,
             write_size,
             read_size,
             rwsize,
@@ -160,6 +177,9 @@ fn main() -> Result<(), HMSimError> {
                 total_size,
                 block_size,
                 rw,
+                read_order,
+                write_order,
+                write_offset,
                 write_size,
                 read_size,
                 rwsize,
@@ -172,7 +192,7 @@ fn main() -> Result<(), HMSimError> {
 
             // debug!("{:#?}", tape_trace_struct);
             Pine.generate_tape_trace(tape_trace_struct?)
-        }
+        },
 
         _ => Err(HMSimError::CommandError),
     }

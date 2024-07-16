@@ -1,4 +1,4 @@
-use log::info;
+use log::{debug, info};
 use regex::Regex;
 
 use crate::{commands::generate_tape_trace::TapeTrace, error::HMSimError, Dist, HMSimBlock, SizePair};
@@ -122,6 +122,9 @@ pub fn command_gen_tape_trace_to_tape_trace_struct(
     // rwrate: (f32, f32),
     block_size: HMSimBlock,
     rw: Option<String>,
+    read_order: Option<String>,
+    write_order: Option<String>,
+    write_offset: Option<HMSimBlock>,
     write_size: Option<(u64, u64)>,
     read_size: Option<(u64, u64)>,
     rwsize: Option<(u64, u64)>,
@@ -142,6 +145,54 @@ pub fn command_gen_tape_trace_to_tape_trace_struct(
         tape_trace.rw = rw;
     } else {
         tape_trace.rw = String::new();
+    }
+
+    // debug!("read_order: {:?}", read_order);
+    match read_order {
+        Some(value) => {
+            match value.as_str() {
+                "rand" => {
+                    tape_trace.read_order = String::from("rand");
+                },
+                "seq" => {
+                    tape_trace.read_order = String::from("seq");
+                },
+                _ => {
+                    return Err(HMSimError::ParseError)
+                }
+            }
+        },
+        None => {
+            tape_trace.read_order = String::from("rand");
+        }
+    }
+
+    match write_order {
+        Some(value) => {
+            match value.as_str() {
+                "rand" => {
+                    tape_trace.write_order = String::from("rand");
+                },
+                "seq" => {
+                    tape_trace.write_order = String::from("seq");
+                },
+                _ => {
+                    return Err(HMSimError::ParseError)
+                }
+            }
+        },
+        None => {
+            tape_trace.write_order = String::from("rand");
+        }
+    }
+
+    match write_offset {
+        Some(value) => {
+            tape_trace.write_offset = value.block;
+        },
+        None => {
+            tape_trace.write_offset = 0;
+        }
     }
 
     // tape_trace.read_rate = rwrate.0;
