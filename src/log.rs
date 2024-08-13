@@ -8,7 +8,7 @@ struct DiskpineLogger;
 
 /// 初始化 log，从 .env 文件中读取最低日志级别 LOG_LEVEL 环境变量，设置默认级别为 INFO
 pub fn log_init() {
-    let log_level = env::var("MINI_REDIS_LOG").unwrap_or_else(|_| String::from("TRACE"));
+    let log_level = env::var("LOG_LEVEL").unwrap_or_else(|_| String::from("TRACE"));
     let log_level = match log_level.as_str() {
         "OFF" => log::LevelFilter::Off,
         "ERROR" => log::LevelFilter::Error,

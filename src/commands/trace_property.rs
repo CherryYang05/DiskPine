@@ -9,98 +9,30 @@
 
 
 use std::{fs::File, io::BufRead, io::BufReader};
+use crate::utils::{bitmap::*, randomness::{Entropy, AJD}};
 
-use log::info;
 
 use crate::error::HMSimError;
 
-// 位图数据结构
-struct BitMapRead {
-    map: Vec<u64>,
-}
-
-struct BitMapWrite {
-    map: Vec<u64>,
-}
-
-// BitMapRead 和 BitMapWrite 需要实现这个 trait
-trait BitOperation {
-    
-    // 获取底层位图数据
-    fn get_bitmap(&mut self) -> &mut Vec<u64>;
-
-    // 设置某一位(置为 1)
-    fn set_bit(&mut self, index: u64) -> bool {
-        let block = index / 64;
-        let bit = index % 64;
-        self.get_bitmap()[block as usize] |= 0x01 << bit;
-        true
-    }
-
-    // 重置某一位(置为 0)
-    fn reset_bit(&mut self, index: u64) -> bool {
-        let block = index / 64;
-        let bit = index % 64;
-        self.get_bitmap()[block as usize] &= 0x00 << bit;
-        true
-    }
-
-    // 判断某一位是否被设置
-    fn test_bit(&mut self, index: u64) -> bool {
-        let block = index / 64;
-        let bit = index % 64;
-        if (self.get_bitmap()[block as usize] & (0x01 << bit)) != 0 {
-            true
-        } else {
-            false
-        }
-    }
-}
-
-impl BitOperation for BitMapRead {
-    fn get_bitmap(&mut self) -> &mut Vec<u64> {
-        &mut self.map
-    }
-}
-
-impl BitOperation for BitMapWrite {
-    fn get_bitmap(&mut self) -> &mut Vec<u64> {
-        &mut self.map
-    }
-}
-
-// impl BitMapRead {
-//     fn new() -> Self {
-//         BitMapRead {
-//             map: vec![0; u32::MAX as usize],
-//         }
-//     }
-// }
-
-impl BitMapWrite {
-    fn new() -> Self {
-        BitMapWrite {
-            map: vec![0; u32::MAX as usize],
-        }
-    }
-}
-
-/// 计算 trace 的数据量及落盘量
-pub fn trace_foot_size(filename: &str) -> Result<(String, String), HMSimError> {
+/// 计算 trace 的数据量、落盘量，以及平均跳跃距离和归一化熵
+pub fn trace_property(filename: &str) -> Result<(String, String, f64, f64), HMSimError> {
     // 位图
-    // let mut bitmap_read = BitMapRead::new();
-    let mut bitmap_write = BitMapWrite::new();
+    let mut bitmap_write = BitMap::new();
+
+    let mut jump = AJD::new();
+    let mut entropy = Entropy::new();
 
     let buf = BufReader::new(File::open(filename).unwrap());
 
     let mut max_index: u64 = 0;
     let mut min_index: u64 = u64::MAX;
+    let mut max_index_length = 0;
 
     let mut volume: u64 = 0;
     let mut footprint: u64 = 0;
 
     // 从 trace 中解析读写、长度以及偏移量字段
-    for (index, line) in buf.lines().enumerate() {
+    for (_index, line) in buf.lines().enumerate() {
         // if index % 10000 == 0 {
         //     info!("{}", index);
         // }
@@ -109,11 +41,14 @@ pub fn trace_foot_size(filename: &str) -> Result<(String, String), HMSimError> {
         // 存储每一行 trace
         let data: Vec<&str> = line.split(' ').collect();
 
-        update_min_max(&mut min_index, &mut max_index, data[2]);
+        update_min_max(&mut min_index, &mut max_index, &mut max_index_length, data[2], data[3]);
 
         let mut real: u64 = 0;
         let offset: u64 = data[2].parse::<u64>().unwrap();
         let len: u64 = data[3].parse::<u64>().unwrap();
+
+        jump.jumping(data[0], offset, len);
+        entropy.block_req_count(data[0], offset, len, 512);
 
         if data[0].eq("W") {
             for i in offset..offset + len {
@@ -130,17 +65,27 @@ pub fn trace_foot_size(filename: &str) -> Result<(String, String), HMSimError> {
 
     }
     let (footprint, volume) = convert_to_str(footprint, volume);
-    Ok((footprint, volume))
+
+    entropy.max_offset = (max_index + max_index_length) as u32 / 512;
+
+    jump.get_jumping();
+    entropy.get_entropy();
+
+    // info!("entropy: {:.4}", entropy.normalized_entropy);
+
+    Ok((footprint, volume, jump.ajd_r, entropy.nor_entropy))
 }
 
-fn update_min_max(min_index: &mut u64, max_index: &mut u64, offset: &str) {
+fn update_min_max(min_index: &mut u64, max_index: &mut u64, max_index_length: &mut u64, offset: &str, length: &str) {
     let offset = offset.parse::<u64>().unwrap();
+    let length: u64 = length.parse().unwrap();
     if offset < *min_index {
         *min_index = offset;
     }
 
     if offset > *max_index {
         *max_index = offset;
+        *max_index_length = length;
     }
 }
 
@@ -201,7 +146,7 @@ mod tests {
 
     #[test]
     fn test() {
-        let res = trace_foot_size("ts_0_validate.trace").unwrap();
+        let res = trace_property("ts_0_validate.trace").unwrap();
         println!("{:?}", res);
     }
 

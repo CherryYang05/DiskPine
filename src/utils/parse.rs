@@ -1,4 +1,3 @@
-use log::{debug, info};
 use regex::Regex;
 
 use crate::{commands::generate_tape_trace::TapeTrace, error::HMSimError, Dist, HMSimBlock, SizePair};
@@ -67,12 +66,12 @@ fn parse_colon(size: &str) -> Result<(f32, f32), HMSimError> {
 /// 对 KB, MB 为单位的字符串进行正则匹配
 fn unit_parse(size: &str) -> Result<HMSimBlock, HMSimError> {
     let regex = Regex::new(r"(\d+)([A-Za-z]+)").unwrap();
-
     let mut hmsim_block = HMSimBlock::new();
-
+    
     hmsim_block.size_in_string = size.to_string();
-
+    
     if let Some(captures) = regex.captures(size) {
+        // debug!("captures = {:?}", captures);
         // 提取数字部分
         let number = captures[1].parse::<u64>().unwrap();
 
@@ -268,6 +267,18 @@ pub fn command_gen_tape_trace_to_tape_trace_struct(
 
     Ok(tape_trace)
 }
+
+/// 求平均数
+pub fn mean(data: &[u64]) -> Option<f32> {
+    let sum = data.iter().sum::<u64>() as f32;
+    let count = data.len();
+
+    match count {
+        positive if positive > 0 => Some(sum / count as f32),
+        _ => None,
+    }
+}
+
 
 #[cfg(test)]
 mod tests {

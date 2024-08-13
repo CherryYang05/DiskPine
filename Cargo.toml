@@ -8,7 +8,7 @@ edition = "2021"
 
 [dependencies]
 # 随机数生成
-rand = "*"
+rand = "0.8.5"
 
 # rand crate 中 distributions 模块的超集
 rand_distr = "0.4.3"
@@ -29,3 +29,6 @@ log = "0.4.20"
 dotenv = "0.15.0"
 
 chrono = "0.4.34"
+
+# 布隆过滤器
+bloomfilter = "1.0.14"

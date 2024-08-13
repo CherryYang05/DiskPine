@@ -1,7 +1,14 @@
-use ::log::{debug, info};
+use ::log::info;
 use clap::{arg, Parser, Subcommand};
 use diskpine::{
-    commands::Pine, error::HMSimError, log, utils::{self, dist_analyze, range_to_num, size_range_to_start_end, string_to_hmsim_block}, Dist, HMSimBlock, SizePair
+    commands::Pine,
+    error::HMSimError,
+    log,
+    utils::{
+        self,
+        parse::{dist_analyze, range_to_num, string_to_hmsim_block},
+    },
+    Dist, HMSimBlock,
 };
 use dotenv::dotenv;
 
@@ -44,8 +51,8 @@ enum Commands {
     // #[clap(value_parser = string_to_hmsim_block)]
     //length_request: Option<HMSimBlock>,
     // },
-    /// 计算 trace 数据量及落盘量
-    TraceFootSize {
+    /// 计算 trace 的数据量、落盘量，以及平均跳跃距离和归一化熵
+    TraceProperty {
         /// trace 文件名
         #[arg(short, long)]
         file: String,
@@ -153,7 +160,7 @@ fn main() -> Result<(), HMSimError> {
         //     num_request,
         //     length_request,
         // } => Pine.generate_trace(),
-        Commands::TraceFootSize { file } => Pine.trace_foot_size(file.as_str()),
+        Commands::TraceProperty { file } => Pine.trace_property(file.as_str()),
 
         Commands::OriginToSim { file, timestamp } => Pine.origin_to_sim(file.as_str(), timestamp),
 
@@ -171,9 +178,9 @@ fn main() -> Result<(), HMSimError> {
             batch_iow_num,
             batch_ior_num,
             time_interval_distribution,
-            req_length_distribution
+            req_length_distribution,
         } => {
-            let tape_trace_struct = utils::command_gen_tape_trace_to_tape_trace_struct(
+            let tape_trace_struct = utils::parse::command_gen_tape_trace_to_tape_trace_struct(
                 total_size,
                 block_size,
                 rw,
@@ -187,14 +194,14 @@ fn main() -> Result<(), HMSimError> {
                 batch_iow_num,
                 batch_ior_num,
                 time_interval_distribution,
-                req_length_distribution
+                req_length_distribution,
             );
 
             // debug!("{:#?}", tape_trace_struct);
-            Pine.generate_tape_trace(tape_trace_struct?)
-        },
+            Pine.generate_tape_trace(&mut tape_trace_struct?)
+        }
 
-        _ => Err(HMSimError::CommandError),
+        // _ => Err(HMSimError::CommandError),
     }
 }
 

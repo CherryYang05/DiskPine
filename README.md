@@ -6,7 +6,7 @@
 
 目前集成命令行工具支持三个命令：
 
-1. trace-foot-size：计算 trace 的数据量和落盘量
+1. trace-property：计算 trace 的数据量、落盘量，以及平均跳跃距离和归一化熵
 
 2. origin-to-sim：将微软原始 trace 格式转化为 HMSim 格式的 trace
 
@@ -29,22 +29,22 @@ cargo run --bin diskpine -- [Command]
 
 >以下命令请复制粘贴运行
 
-#### 2.1.1 trace-foot-size 命令
+#### 2.1.1 trace-property 命令
 
-功能：计算 trace 的数据量和落盘量
+功能：计算 trace 的数据量、落盘量，以及平均跳跃距离和归一化熵
 
 查看 `help`：
 
 Shell Command:
 
-`cargo run --bin diskpine -- trace-foot-size --help`
+`cargo run --bin diskpine -- trace-property --help`
 
 Output:
 
 ```shell
 计算 trace 数据量及落盘量
 
-Usage: diskpine trace-foot-size --file <FILE>
+Usage: diskpine trace-property --file <FILE>
 
 Options:
   -f, --file <FILE>  trace 文件名
@@ -53,7 +53,7 @@ Options:
 
 一个使用样例为：
 
-`cargo run --bin diskpine -- trace-foot-size -f tape.trace`
+`cargo run --bin diskpine -- trace-property -f tape.trace`
 
 #### 2.1.2 origin-to-sim 命令
 
@@ -123,11 +123,11 @@ Options:
 
 - rw: 读写标志，表明生成的请求的读写操作，可选参数为 [r, w, rw]；
 
-- woff: write_offset，指定已经顺序写入的数据的地址，在随机读和顺序写操作中需指定该参数，该参数单位可以为 KB，MB，GB，TB，不加单位默认为 B，不区分大小写；
+- woff: write_offset，指定已经顺序写入的数据的地址，在**只有随机读**和**包含顺序写**的操作中需指定该参数，该参数单位可以为 KB，MB，GB，TB，不加单位默认为 B，不区分大小写；
 
-- ro: read_order，指定读操作是随机读还是顺序读。如果是随机读，那么在 [0, woff] 区间内随机生成读请求的偏移量，直到数据量达到 size；如果是顺序读，偏移量最大到 size 表示的大小，即生成地址为 [0, size] 区间内的顺序读请求。**当该参数为 rand 时，woff 参数必须指定一个不为 0 的值。** 可选参数为 [rand, seq]；
+- ro: read_order，指定读操作是随机读还是顺序读。如果是随机读，那么在 [0, woff] 区间内随机生成读请求的偏移量，直到数据量达到 size；如果是顺序读但是没有写操作，偏移量最大到 size 表示的大小，即生成地址为 [0, size] 区间内的顺序读请求，如果是顺序读有写操作，偏移量随着写偏移量 woff 变化，即生成地址为 [0, woff] 区间内的顺序读请求。**当该参数为 rand 时，woff 参数必须指定一个不为 0 的值。** 可选参数为 [rand, seq]；
 
-- wo: write_order，指定写操作是随机写还是顺序写。因为是磁带操作，所以这里固定为顺序写，顺序写的起始偏移地址由 woff 指定，若不指定则该参数默认为 0。可选参数为 [rand, seq]
+- wo: write_order，指定写操作是随机写还是顺序写。因为是磁带操作，所以这里默认为顺序写，顺序写的起始偏移地址由 woff 指定，若不指定则该参数默认为 0。可选参数为 [rand, seq]
 
 - wsize: 设置每个写请求的大小范围，单位是 blk_size 参数指定的值
 
@@ -163,10 +163,10 @@ Options:
 ./diskpine [Command]
 ```
 
-### 2.2.1 trace-foot-size
+### 2.2.1 trace-property
 以 `2.1.1` 的子命令为例，给出一个命令样例：
 
-`./diskpine trace-foot-size -f tape.trace`
+`./diskpine trace-property -f tape.trace`
 
 ### 2.2.2 origin-to-sim
 以 `2.1.2` 的子命令为例，给出一个命令样例：
